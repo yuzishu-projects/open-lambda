@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"sync/atomic"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -27,7 +27,7 @@ type SOCKContainer struct {
 	scratchDir       string
 	cg               cgroups.Cgroup
 	rtType           common.RuntimeType
-	client *http.Client
+	client           *http.Client
 
 	// 1 for self, plus 1 for each child (we can't release memory
 	// until all descendants are dead, because they share the
@@ -58,6 +58,7 @@ func (container *SOCKContainer) GetRuntimeType() common.RuntimeType {
 }
 
 func (container *SOCKContainer) freshProc() (err error) {
+	log.Printf("freshProc() invoked")
 	// get FD to cgroup
 	cgFiles := make([]*os.File, 1)
 	path := container.cg.CgroupProcsPath()
@@ -71,10 +72,13 @@ func (container *SOCKContainer) freshProc() (err error) {
 	var cmd *exec.Cmd
 
 	if container.rtType == common.RT_PYTHON {
+		// cmd = exec.Command(
+		// 	"chroot", container.containerRootDir, "python3", "-u",
+		// 	"/runtimes/python/server.py", "/host/bootstrap.py", strconv.Itoa(1),
+		// 	strconv.FormatBool(common.Conf.Features.Enable_seccomp),
+		// )
 		cmd = exec.Command(
-			"chroot", container.containerRootDir, "python3", "-u",
-			"/runtimes/python/server.py", "/host/bootstrap.py", strconv.Itoa(1), 
-			strconv.FormatBool(common.Conf.Features.Enable_seccomp),
+			"chroot", container.containerRootDir, "bash", "/home/yuzishu/Desktop/share_exp/ShareSoftState/cpython-3.8.13/multiple_version_test/start.sh",
 		)
 	} else if container.rtType == common.RT_NATIVE {
 		if container.containerProxy == nil {
@@ -89,7 +93,6 @@ func (container *SOCKContainer) freshProc() (err error) {
 			"chroot", container.containerRootDir,
 			"env", "RUST_BACKTRACE=full", "/runtimes/native/server", strconv.Itoa(1),
 			strconv.FormatBool(common.Conf.Features.Enable_seccomp),
-
 		)
 	} else {
 		return fmt.Errorf("Unsupported runtime")
@@ -336,9 +339,9 @@ func (container *SOCKContainer) fork(dst Sandbox) (err error) {
 		return fmt.Errorf("only %vMB of spare memory in parent, rejecting fork request (need at least 3MB)", spareMB)
 	}
 
-    // increment reference count before we start any processes
+	// increment reference count before we start any processes
 	container.children[dst.ID()] = dst
-    newCount := atomic.AddInt32(&container.cgRefCount, 1)
+	newCount := atomic.AddInt32(&container.cgRefCount, 1)
 
 	if newCount == 0 {
 		panic("cgRefCount was already 0")
@@ -416,7 +419,7 @@ func (container *SOCKContainer) Meta() *SandboxMeta {
 	return container.meta
 }
 
-func (container *SOCKContainer) Client() (*http.Client) {
+func (container *SOCKContainer) Client() *http.Client {
 	return container.client
 }
 

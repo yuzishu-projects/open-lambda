@@ -80,6 +80,7 @@ def fork_server():
         pid = os.fork()
 
         if pid:
+            print(f"server.py: forked child with pid: {pid}")
             # parent
             os.close(root_fd)
             os.close(mem_cgroup_fd)
