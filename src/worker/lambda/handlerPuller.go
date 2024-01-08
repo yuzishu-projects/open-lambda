@@ -19,7 +19,8 @@ import (
 	"github.com/open-lambda/open-lambda/ol/common"
 )
 
-var notFound404 = errors.New("file does not exist")
+var errNotFound404 = errors.New("file does not exist")
+var handlerNameRegex = regexp.MustCompile(`^[A-Za-z0-9\.\-\_]+$`)
 
 // TODO: for web registries, support an HTTP-based access key
 // (https://en.wikipedia.org/wiki/Basic_access_authentication)
@@ -109,11 +110,8 @@ func (cp *HandlerPuller) isRemote() bool {
 func (cp *HandlerPuller) Pull(name string) (rt_type common.RuntimeType, targetDir string, err error) {
 	t := common.T0("pull-lambda")
 	defer t.T1()
-
-	matched, err := regexp.MatchString(`^[A-Za-z0-9\.\-\_]+$`, name)
-	if err != nil {
-		return rt_type, "", err
-	} else if !matched {
+	
+	if !handlerNameRegex.MatchString(name) {
 		msg := "bad lambda name '%s', can only contain letters, numbers, period, dash, and underscore"
 		return rt_type, "", fmt.Errorf(msg, name)
 	}
@@ -130,31 +128,31 @@ func (cp *HandlerPuller) Pull(name string) (rt_type common.RuntimeType, targetDi
 			rt_type, targetDir, err = cp.pullRemoteFile(urls[i], name)
 			if err == nil {
 				return rt_type, targetDir, nil
-			} else if err != notFound404 {
+			} else if err != errNotFound404 {
 				// 404 is OK, because we just go on to check the next URLs
 				return rt_type, "", err
 			}
 		}
 
 		return rt_type, "", fmt.Errorf("lambda not found at any of these locations: %s", strings.Join(urls, ", "))
-	} else {
-		// registry type = file
-		paths := []string{
-			filepath.Join(cp.prefix, name) + ".tar.gz",
-			filepath.Join(cp.prefix, name) + ".py",
-			filepath.Join(cp.prefix, name) + ".bin",
-			filepath.Join(cp.prefix, name),
-		}
-
-		for i := 0; i < len(paths); i++ {
-			if _, err := os.Stat(paths[i]); !os.IsNotExist(err) {
-				rt_type, targetDir, err = cp.pullLocalFile(paths[i], name)
-				return rt_type, targetDir, err
-			}
-		}
-
-		return rt_type, "", fmt.Errorf("lambda not found at any of these locations: %s", strings.Join(paths, ", "))
 	}
+
+	// registry type = file
+	paths := []string{
+		filepath.Join(cp.prefix, name) + ".tar.gz",
+		filepath.Join(cp.prefix, name) + ".py",
+		filepath.Join(cp.prefix, name) + ".bin",
+		filepath.Join(cp.prefix, name),
+	}
+
+	for i := 0; i < len(paths); i++ {
+		if _, err := os.Stat(paths[i]); !os.IsNotExist(err) {
+			rt_type, targetDir, err = cp.pullLocalFile(paths[i], name)
+			return rt_type, targetDir, err
+		}
+	}
+
+	return rt_type, "", fmt.Errorf("lambda not found at any of these locations: %s", strings.Join(paths, ", "))
 }
 
 // delete any caching associated with this handler
@@ -210,9 +208,9 @@ func (cp *HandlerPuller) pullLocalFile(src, lambdaName string) (rt_type common.R
 	targetDir = cp.dirMaker.Get(lambdaName)
 	if err := os.Mkdir(targetDir, os.ModeDir); err != nil {
 		return rt_type, "", err
-	} else {
-		log.Printf("Created new directory for lambda function at `%s`", targetDir)
 	}
+
+	log.Printf("Created new directory for lambda function at `%s`", targetDir)
 
 	// Make sure we include the suffix
 	if strings.HasSuffix(stat.Name(), ".py") {
@@ -224,8 +222,6 @@ func (cp *HandlerPuller) pullLocalFile(src, lambdaName string) (rt_type common.R
 		if err != nil {
 			return rt_type, "", fmt.Errorf("%s :: %s", err)
 		}
-
-
 	} else if strings.HasSuffix(stat.Name(), ".bin") {
 		log.Printf("Installing `%s` from binary file", src)
 
@@ -235,7 +231,6 @@ func (cp *HandlerPuller) pullLocalFile(src, lambdaName string) (rt_type common.R
 		if err != nil {
 			return rt_type, "", fmt.Errorf("%s :: %s", err)
 		}
-
 	} else if strings.HasSuffix(stat.Name(), ".tar.gz") {
 		log.Printf("Installing `%s` from an archive file", src)
 
@@ -284,7 +279,7 @@ func (cp *HandlerPuller) pullRemoteFile(src, lambdaName string) (rt_type common.
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return rt_type, "", notFound404
+		return rt_type, "", errNotFound404
 	}
 
 	if resp.StatusCode == http.StatusNotModified {
