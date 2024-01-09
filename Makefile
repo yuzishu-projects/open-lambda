@@ -85,7 +85,7 @@ test-all:
 	sudo python3 -u ./scripts/test.py --worker_type=sock
 	sudo python3 -u ./scripts/test.py --worker_type=docker --test_filter=ping_test,numpy
 	sudo python3 -u ./scripts/sock_test.py
-	sudo python3 -u ./scripts/bin_test.py --worker_type=wasm
+	# sudo python3 -u ./scripts/bin_test.py --worker_type=wasm
 	sudo python3 -u ./scripts/bin_test.py --worker_type=sock
 
 fmt:

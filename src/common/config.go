@@ -158,14 +158,14 @@ func LoadDefaults(olPath string) error {
 		Pkgs_dir:          packagesDir,
 		Sandbox_config:    map[string]any{},
 		SOCK_base_path:    baseImgDir,
-		Registry_cache_ms: 5000, // 5 seconds
+		Registry_cache_ms: 100, // 5 seconds
 		Mem_pool_mb:       memPoolMb,
 		Import_cache_tree: zygoteTreePath,
 		Limits: LimitsConfig{
-			Procs:               10,
-			Mem_mb:              50,
+			Procs:               16,
+			Mem_mb:              500,
 			CPU_percent:         100,
-			Max_runtime_default: 30,
+			Max_runtime_default: 600,
 			Installer_mem_mb:    Max(250, Min(500, memPoolMb/2)),
 			Swappiness:          0,
 		},

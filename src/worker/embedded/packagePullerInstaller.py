@@ -67,9 +67,15 @@ def f(event):
     pkg = event["pkg"]
     alreadyInstalled = event["alreadyInstalled"]
     if not alreadyInstalled:
+        installCmd = ['pip3', 'install', '--no-deps', pkg, '--cache-dir', '/tmp/.cache', '-t', '/host/files']
+        if pkg in ['torch', 'torchvision', 'torchaudio'] or pkg.startswith('nvidia'):
+            installCmd.append('--index-url')
+            installCmd.append('https://download.pytorch.org/whl/cpu')
+        else:
+            installCmd.append('--index-url')
+            installCmd.append('https://pypi.tuna.tsinghua.edu.cn/simple')
         try:
-            subprocess.check_output(
-                ['pip3', 'install', '--no-deps', pkg, '--cache-dir', '/tmp/.cache', '-t', '/host/files'])
+            subprocess.check_output(installCmd)
         except subprocess.CalledProcessError as e:
             print(f'pip install failed with error code {e.returncode}')
             print(f'Output: {e.output}')
