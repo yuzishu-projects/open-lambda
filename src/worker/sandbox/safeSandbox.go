@@ -51,7 +51,7 @@ func (sb *safeSandbox) startNotifyingListeners(eventHandlers []SandboxEventFunc)
 }
 
 // like regular printf, with suffix indicating which sandbox produced the message
-func (sb *safeSandbox) printf(format string, args ...interface{}) {
+func (sb *safeSandbox) printf(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	log.Printf("%s [SB %s]", strings.TrimRight(msg, "\n"), sb.Sandbox.ID())
 }
@@ -118,7 +118,7 @@ func (sb *safeSandbox) DestroyIfPaused(reason string) {
 }
 
 func (sb *safeSandbox) Pause() (err error) {
-	sb.printf("Pause()")
+    sb.printf("Pause()")
 	t := common.T0("Pause()")
 	defer t.T1()
 	sb.Mutex.Lock()
