@@ -169,7 +169,7 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 	log.Printf("Create() invoked")
 	// create new process in container (fresh, or forked from parent)
 	if parent != nil {
-		pool.Printf("parent.fork invoked")
+		pool.printf("parent.fork invoked")
 		t2 := t.T0("fork-proc")
 		if err := parent.fork(c); err != nil {
 			pool.printf("parent.fork returned %v", err)
