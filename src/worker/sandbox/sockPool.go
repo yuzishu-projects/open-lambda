@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
-	"net"
-	"net/http"
 	"time"
 
 	"github.com/open-lambda/open-lambda/ol/common"
@@ -125,6 +125,8 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 	if rtType == common.RT_PYTHON {
 		// add installed packages to the path, and import the modules we'll need
 		var pyCode []string
+		pyCode = append(pyCode, "import ipdos_client_sdk")
+		pyCode = append(pyCode, "client = ipdos_client_sdk.IpdosClient()")
 
 		for _, pkg := range meta.Installs {
 			path := "'/packages/" + pkg + "/files'"
@@ -136,6 +138,8 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 		// we need handle any possible error while importing a module
 		for _, mod := range meta.Imports {
 			pyCode = append(pyCode, "try:")
+			pyCode = append(pyCode, "	service_key = client.load_service(\"cv2\", \"1\")")
+			pyCode = append(pyCode, "	client.report_load_service(\"cv2\", \"1\", 86400)")
 			pyCode = append(pyCode, "	import "+mod)
 			pyCode = append(pyCode, "except Exception as e:")
 			pyCode = append(pyCode, "	print('bootstrap.py error:', e)")
@@ -162,8 +166,10 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 	safe := newSafeSandbox(c)
 	c = safe
 
+	log.Printf("Create() invoked")
 	// create new process in container (fresh, or forked from parent)
 	if parent != nil {
+		pool.Printf("parent.fork invoked")
 		t2 := t.T0("fork-proc")
 		if err := parent.fork(c); err != nil {
 			pool.printf("parent.fork returned %v", err)
@@ -172,6 +178,7 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 		cSock.parent = parent
 		t2.T1()
 	} else {
+		log.Printf("cSock.freshProc invoked")
 		t2 := t.T0("fresh-proc")
 		if err := cSock.freshProc(); err != nil {
 			return nil, err
@@ -192,7 +199,7 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 
 	cSock.client = &http.Client{
 		Transport: &http.Transport{Dial: dial},
-		Timeout: time.Second * time.Duration(common.Conf.Limits.Max_runtime_default),
+		Timeout:   time.Second * time.Duration(common.Conf.Limits.Max_runtime_default),
 	}
 
 	// event handling
