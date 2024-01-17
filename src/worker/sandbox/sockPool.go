@@ -64,6 +64,28 @@ func sbStr(sb Sandbox) string {
 	return fmt.Sprintf("<SB %s>", sb.ID())
 }
 
+var whiteMap = map[string]string{
+	"cv2": "4.7",
+	//"cv2":        "4.8",
+	"flask": "2.3",
+	//"flask":      "3.0",
+	"requests": "2.31",
+	//"torch":      "1.12",
+	"torch":      "2.1",
+	"numpy":      "1.24",
+	"sqlalchemy": "2.0",
+	"pillow":     "10.2",
+	"minio":      "7.2",
+	"simplejson": "3.19",
+	"pandas":     "2.0",
+}
+
+var handlePkgs = map[string]string{
+	"flask":   "import socket\nsys.modules[\"socket\"] = socket\nimportlib.reload(socket)",
+	"requests":   "import socket\nsys.modules[\"socket\"] = socket\nimportlib.reload(socket)",
+	"sqlalchemy": "import weakref\nsys.modules[\"weakref\"] = weakref\nimportlib.reload(weakref)",
+}
+
 func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir string, meta *SandboxMeta, rtType common.RuntimeType) (sb Sandbox, err error) {
 	id := fmt.Sprintf("%d", atomic.AddInt64(&nextId, 1))
 	meta = fillMetaDefaults(meta)
@@ -137,12 +159,22 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 
 		// we need handle any possible error while importing a module
 		for _, mod := range meta.Imports {
-			pyCode = append(pyCode, "try:")
-			pyCode = append(pyCode, "	service_key = client.load_service(\"cv2\", \"1\")")
-			pyCode = append(pyCode, "	client.report_load_service(\"cv2\", \"1\", 86400)")
-			pyCode = append(pyCode, "	import "+mod)
-			pyCode = append(pyCode, "except Exception as e:")
-			pyCode = append(pyCode, "	print('bootstrap.py error:', e)")
+			v, ok := whiteMap[mod]
+			if ok {
+				pyCode = append(pyCode, "import sys\nimport importlib")
+				pyCode = append(pyCode, fmt.Sprintf("service_key = client.load_service(\"%s\", \"%s\")", mod, v))
+				// pyCode = append(pyCode, fmt.Sprintf("client.report_load_service(\"%s\", \"%s\", 86400)", mod, v))
+				pyCode = append(pyCode, "client.set_service(service_key)")
+				newCode, newOk := handlePkgs[mod]
+				if newOk {
+					pyCode = append(pyCode, newCode)
+				}
+				
+				pyCode = append(pyCode, "import "+mod)
+				
+				
+				pyCode = append(pyCode, "client.unset_service()")
+			}
 		}
 
 		// handler or Zygote?
@@ -188,8 +220,9 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 
 	// start HTTP client
 	sockPath := filepath.Join(cSock.scratchDir, "ol.sock")
-	if len(sockPath) > 108 {
-		return nil, fmt.Errorf("socket path length cannot exceed 108 characters (try moving cluster closer to the root directory")
+	log.Printf("sockPath: %s", sockPath)
+	if len(sockPath) > 255 {
+		return nil, fmt.Errorf("socket path length cannot exceed 255 characters (try moving cluster closer to the root directory")
 	}
 
 	log.Printf("Connecting to container at '%s'", sockPath)
