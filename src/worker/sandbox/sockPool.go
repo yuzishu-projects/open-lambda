@@ -81,7 +81,7 @@ var whiteMap = map[string]string{
 }
 
 var handlePkgs = map[string]string{
-	"flask":   "import socket\nsys.modules[\"socket\"] = socket\nimportlib.reload(socket)",
+	"flask":      "import socket\nsys.modules[\"socket\"] = socket\nimportlib.reload(socket)",
 	"requests":   "import socket\nsys.modules[\"socket\"] = socket\nimportlib.reload(socket)",
 	"sqlalchemy": "import weakref\nsys.modules[\"weakref\"] = weakref\nimportlib.reload(weakref)",
 }
@@ -169,10 +169,9 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 				if newOk {
 					pyCode = append(pyCode, newCode)
 				}
-				
+
 				pyCode = append(pyCode, "import "+mod)
-				
-				
+
 				pyCode = append(pyCode, "client.unset_service()")
 			}
 		}
@@ -220,9 +219,8 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 
 	// start HTTP client
 	sockPath := filepath.Join(cSock.scratchDir, "ol.sock")
-	log.Printf("sockPath: %s", sockPath)
-	if len(sockPath) > 255 {
-		return nil, fmt.Errorf("socket path length cannot exceed 255 characters (try moving cluster closer to the root directory")
+	if len(sockPath) > 108 {
+		return nil, fmt.Errorf("socket path length cannot exceed 108 characters (try moving cluster closer to the root directory")
 	}
 
 	log.Printf("Connecting to container at '%s'", sockPath)

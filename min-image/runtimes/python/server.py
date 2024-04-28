@@ -2,7 +2,7 @@
 
 ''' Python runtime for sock '''
 
-import os, sys, json, argparse, importlib, traceback, time, fcntl, array, socket, struct
+import os, sys, socket, json, argparse, importlib, traceback, time, fcntl, array, struct
 
 sys.path.append("/usr/local/lib/python3.8/dist-packages")
 
