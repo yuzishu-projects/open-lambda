@@ -25,6 +25,7 @@ RUN mv /tmp/py-runtime/ipdos.cpython-38-x86_64-linux-gnu.so /runtimes/python/ipd
 RUN rm -rf /tmp/py-runtime
 
 COPY start.sh /home/yuzishu/Desktop/share_exp/ShareSoftState/cpython-3.8.13/multiple_version_test/
+COPY yuzishu_test_ol /home/yuzishu/Desktop/share_exp/
 
 # cv2
 RUN apt-get update && apt-get -y install libgl1 libglib2.0-0
@@ -36,5 +37,7 @@ COPY cfg /data/cfg
 
 # for the Docker container engine
 COPY spin /
+
+COPY lass-eurosys-exp /lass-eurosys-exp
 
 CMD ["/spin"]

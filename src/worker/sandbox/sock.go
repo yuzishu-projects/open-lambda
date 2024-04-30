@@ -78,7 +78,7 @@ func (container *SOCKContainer) freshProc() (err error) {
 		// 	strconv.FormatBool(common.Conf.Features.Enable_seccomp),
 		// )
 		cmd = exec.Command(
-			"chroot", container.containerRootDir, "bash", "/home/yuzishu/Desktop/share_exp/ShareSoftState/cpython-3.8.13/multiple_version_test/start.sh",
+			"chroot", container.containerRootDir, "/home/yuzishu/Desktop/share_exp/yuzishu_test_ol",
 		)
 	} else if container.rtType == common.RT_NATIVE {
 		if container.containerProxy == nil {
