@@ -184,6 +184,7 @@ func (pool *SOCKPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir st
 		}
 
 		path := filepath.Join(scratchDir, "bootstrap.py")
+		log.Printf("Writing bootstrap.py to '%s'", path)
 		code := []byte(strings.Join(pyCode, "\n"))
 		if err := ioutil.WriteFile(path, code, 0600); err != nil {
 			return nil, err

@@ -15,18 +15,18 @@ import os
 
 
 modlue_map = {
-    "sys":sys,
-    "_sre":_sre,
-    "_operator":_operator,
-    "itertools":itertools,
-    "_collections":_collections,
-    "_functools":_functools,
-    "errno":errno,
-    "_ast":_ast,
-    "pwd":pwd,
-    "atexit":_string,
-    "gc":gc,
-    "_string":_string
+    # "sys":sys,
+    # "_sre":_sre,
+    # "_operator":_operator,
+    # "itertools":itertools,
+    # "_collections":_collections,
+    # "_functools":_functools,
+    # "errno":errno,
+    # "_ast":_ast,
+    # "pwd":pwd,
+    # "atexit":_string,
+    # "gc":gc,
+    # "_string":_string
 }
 
 Global_Service = {}
@@ -40,11 +40,15 @@ class IpdosClient:
 
     def load_service(self, name:str, version:str)->str:
         service_key = name+version
+        # print("load service", name, version)
         if service_key in Global_Service:
             return service_key
         else:
             Global_Service[service_key] = True
         id = ipdos.load_service(name, version)
+        if id == -1:
+            return ""
+        # print("load service", name, version, id)
         self.loaded_services.append((name, version))
         
         dict = sys.shared_states[service_key]["buildin_module_record"]
@@ -62,6 +66,9 @@ class IpdosClient:
         # print("report load service", name, version, t)
         controller_client.report_use_service(name, version, t)
     def set_service(self, service_key):
+        if service_key == "":
+            ipdos.unset_loading()
+            return True
         ipdos.set_loading(service_key)
         return True
     

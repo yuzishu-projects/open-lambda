@@ -173,7 +173,7 @@ def main():
 
     global bootstrap_path
 
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 1:
         print("Expected execution: chroot <path_to_root_fs> python3 server.py <path_to_bootstrap.py> [cgroup-count] [enable-seccomp]")
         print("    cgroup-count: number of FDs (starting at 3) that refer to /sys/fs/cgroup/..../cgroup.procs files")
         print("    enable-seccomp: true/false to enable or disables seccomp filtering")
@@ -182,27 +182,41 @@ def main():
     print('server.py: started new process with args: ' + " ".join(sys.argv))
 
     #enable_seccomp if enable-seccomp is not passed
-    if len(sys.argv) < 3 or sys.argv[3] == 'true':
+    if len(sys.argv) < 2 or sys.argv[2] == 'true':
         return_code = ol.enable_seccomp()
         assert return_code >= 0
         print('seccomp enabled')
 
     bootstrap_path = sys.argv[1]
-    cgroup_fds = 0
-    if len(sys.argv) > 2:
-        cgroup_fds = int(sys.argv[2])
+    # cgroup_fds = 0
+    # if len(sys.argv) > 2:
+    #     cgroup_fds = int(sys.argv[2])
 
     # join cgroups passed to us.  The fact that chroot is called
     # before we start means we also need to pass FDs to the cgroups we
     # want to join, because chroot happens before we run, so we can no
     # longer reach them by paths.
     pid = str(os.getpid())
-    for i in range(cgroup_fds):
+    # for i in range(cgroup_fds):
         # golang guarantees extras start at 3: https://golang.org/pkg/os/exec/#Cmd
-        fd_id = 3 + i
-        with os.fdopen(fd_id, "w") as file:
-            file.write(pid)
-            print(f'server.py: joined cgroup, close FD {fd_id}')
+    fd_id = int(os.getenv('CGROUP_FD'))
+    print(f'fd in env {fd_id}')
+    with os.fdopen(fd_id, "w") as file:
+        file.write(pid)
+        print(f'server.py: joined cgroup, close FD {fd_id}')
+
+    # if len(sys.argv) > 2:
+    #     cgroup_path = sys.argv[2]
+    # else:
+    #     print('cgroup_path required')
+    #     sys.exit(1)
+
+    # if cgroup_path:
+    #     pid = str(os.getpid())
+
+    #     with open(cgroup_path, "w") as file:
+    #         file.write(pid)
+    #         print(f'server.py: joined cgroup at {cgroup_path}')
 
     start_container()
 

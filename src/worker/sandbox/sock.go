@@ -62,10 +62,12 @@ func (container *SOCKContainer) freshProc() (err error) {
 	// get FD to cgroup
 	cgFiles := make([]*os.File, 1)
 	path := container.cg.CgroupProcsPath()
+	log.Printf("cg.CgroupProcsPath() %s\n", path)
 	fd, err := syscall.Open(path, syscall.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
+	log.Printf("fd %d\n", fd)
 	cgFiles[0] = os.NewFile(uintptr(fd), path)
 	defer cgFiles[0].Close()
 
@@ -78,8 +80,10 @@ func (container *SOCKContainer) freshProc() (err error) {
 		// 	strconv.FormatBool(common.Conf.Features.Enable_seccomp),
 		// )
 		cmd = exec.Command(
-			"chroot", container.containerRootDir, "/home/yuzishu/Desktop/share_exp/yuzishu_test_ol",
+			"chroot", container.containerRootDir, "/home/yuzishu/Desktop/share_exp/yuzishu_test_ol", path, container.containerRootDir,
 		)
+		log.Printf("container.containerRootDir=%s\n", container.containerRootDir)
+
 	} else if container.rtType == common.RT_NATIVE {
 		if container.containerProxy == nil {
 			err := container.launchContainerProxy()
@@ -108,6 +112,8 @@ func (container *SOCKContainer) freshProc() (err error) {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
+
+	// time.Sleep(10 * time.Second)
 
 	// Runtimes will fork off a new container,
 	// so this won't block long
@@ -199,6 +205,7 @@ func (container *SOCKContainer) populateRoot() (err error) {
 	if err := syscall.Mount("none", container.containerRootDir, "", common.PRIVATE, ""); err != nil {
 		return fmt.Errorf("failed to make root dir private :: %v", err)
 	}
+	log.Printf("mounted %s %s\n", baseDir, container.containerRootDir)
 
 	// FILE SYSTEM STEP 2: code dir
 	if container.codeDir != "" {
@@ -223,12 +230,14 @@ func (container *SOCKContainer) populateRoot() (err error) {
 	if err := syscall.Mount(container.scratchDir, sbScratchDir, "", common.BIND, ""); err != nil {
 		return fmt.Errorf("failed to bind scratch dir: %v", err.Error())
 	}
+	log.Printf("mounted %s %s\n", container.scratchDir, sbScratchDir)
 
 	// TODO: cheaper to handle with symlink in lambda image?
 	sbTmpDir := filepath.Join(container.containerRootDir, "tmp")
 	if err := syscall.Mount(tmpDir, sbTmpDir, "", common.BIND, ""); err != nil {
 		return fmt.Errorf("failed to bind tmp dir: %v", err.Error())
 	}
+	log.Printf("mounted %s %s\n", tmpDir, sbTmpDir)
 
 	return nil
 }
